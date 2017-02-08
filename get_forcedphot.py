@@ -23,8 +23,16 @@ def imgserv_json_to_df(json_input):
         for e in json_data['result']['table']['metadata']['elements']]
     return(df)
 
-def parse_phot_table(table_path):
-    tab = Table.read(table_path)
+def conv_afwtable_astropy(afwtable):
+    with tempfile.NamedTemporaryFile() as tf:
+        afwtable.writeFits(tf.name)
+        tf.flush()
+        tf.seek(0)
+        atab = Table.read(tf.name, hdu=1)
+    return(atab)
+
+def parse_phot_table(afwTable):
+    tab = conv_afwtable_astropy(afwTable)
     tab['run'] = tab.meta['RUN']
     tab['camcol'] = tab.meta['CAMCOL']
     tab['field'] = tab.meta['FIELD']
@@ -92,7 +100,7 @@ def main():
 
     # Concatenate the input tables
     tnames = glob.glob(os.path.join(dirpath, 'photometry_*.fits'))
-    tbl_list = [parse_phot_table(name) for name in tnames]
+    tbl_list = [parse_phot_table(Table.read(name, hdu=1)) for name in tnames]
     alltabs = vstack(tbl_list)
 
     # merge
