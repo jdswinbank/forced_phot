@@ -31,15 +31,18 @@ def conv_afwtable_astropy(afwtable):
         atab = Table.read(tf.name, hdu=1)
     return(atab)
 
-def parse_phot_table(afwTable):
-    tab = conv_afwtable_astropy(afwTable)
+def parse_phot_table(afwTable, convert=True):
+    if convert:
+        tab = conv_afwtable_astropy(afwTable)
+    else:
+        tab = afwTable
     tab['run'] = tab.meta['RUN']
     tab['camcol'] = tab.meta['CAMCOL']
     tab['field'] = tab.meta['FIELD']
     tab['filterName'] = tab.meta['FILTER']
     tab['psfMag'] = -2.5*np.log10(tab['base_PsfFlux_flux']/tab.meta['FLUXM0'])
-    tab['psfMagErr'] = -2.5*np.log10(tab['base_PsfFlux_fluxSigma']
-                                     /tab.meta['FLUXM0SG'])
+    tab['psfMagErr'] = -2.5*np.log10(1.- + (tab['base_PsfFlux_fluxSigma']
+                                     /tab.['base_PsfFlux_flux']))
     tab['psfMag'].unit = u.mag
     tab['psfMagErr'].unit = u.mag
     del tab.meta['RUN']
@@ -100,7 +103,8 @@ def main():
 
     # Concatenate the input tables
     tnames = glob.glob(os.path.join(dirpath, 'photometry_*.fits'))
-    tbl_list = [parse_phot_table(Table.read(name, hdu=1)) for name in tnames]
+    tbl_list = [parse_phot_table(Table.read(name, hdu=1), convert=False) 
+                for name in tnames]
     alltabs = vstack(tbl_list)
 
     # merge
