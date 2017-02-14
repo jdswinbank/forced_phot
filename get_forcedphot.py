@@ -14,45 +14,9 @@ from astropy.time import Time
 import glob
 import time
 import lsst.log
+from dax_utils import imgserv_json_to_df
+from stripe82phot import conv_afwtable_astropy, parse_phot_table
 
-def imgserv_json_to_df(json_input):
-    with open(json_input) as json_file:
-        json_data = json.load(json_file)
-
-    df = pd.DataFrame.from_dict(json_data['result']['table']['data'])
-    df.columns = [e['name'] 
-        for e in json_data['result']['table']['metadata']['elements']]
-    return(df)
-
-def conv_afwtable_astropy(afwtable):
-    with tempfile.NamedTemporaryFile() as tf:
-        afwtable.writeFits(tf.name)
-        tf.flush()
-        tf.seek(0)
-        atab = Table.read(tf.name, hdu=1)
-    return(atab)
-
-def parse_phot_table(afwTable, convert=True):
-    if convert:
-        tab = conv_afwtable_astropy(afwTable)
-    else:
-        tab = afwTable
-    tab['run'] = tab.meta['RUN']
-    tab['camcol'] = tab.meta['CAMCOL']
-    tab['field'] = tab.meta['FIELD']
-    tab['filterName'] = tab.meta['FILTER']
-    tab['psfMag'] = -2.5*np.log10(tab['base_PsfFlux_flux']/tab.meta['FLUXM0'])
-    tab['psfMagErr'] = -2.5*np.log10(1.- + (tab['base_PsfFlux_fluxSigma']
-                                     /tab['base_PsfFlux_flux']))
-    tab['psfMag'].unit = u.mag
-    tab['psfMagErr'].unit = u.mag
-    del tab.meta['RUN']
-    del tab.meta['CAMCOL']
-    del tab.meta['FIELD']
-    del tab.meta['FILTER']
-    del tab.meta['FLUXM0']
-    del tab.meta['FLUXM0SG']
-    return(tab)
 
 def main():
     lsst.log.debug('Start of main ,'+time.ctime())
