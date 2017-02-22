@@ -37,14 +37,22 @@ def query_tap_json(tap_endpoint, adql_query):
     return df
 
 
-def get_image_table(ra, dec, filterName, table_name='Science_Ccd_Exposure'):
-    df = query_tap_json('http://lsst-qserv-dax01:5000/db/v0/tap',
-            """select * from {} where 
-               filterName = '{}' and
-               scisql_s2PtInCPoly({}, {}, 
-               corner1Ra, corner1Decl, corner2Ra, corner2Decl, 
-               corner3Ra, corner3Decl, corner4Ra, corner4Decl)=1
-            """.format(table_name, filterName, ra, dec))
+def get_image_table(ra, dec, filter_name, table_name='Science_Ccd_Exposure'):
+    if filter_name is not None:
+        df = query_tap_json('http://lsst-qserv-dax01:5000/db/v0/tap',
+                """select * from {} where 
+                   filterName = '{}' and
+                   scisql_s2PtInCPoly({}, {}, 
+                   corner1Ra, corner1Decl, corner2Ra, corner2Decl, 
+                   corner3Ra, corner3Decl, corner4Ra, corner4Decl)=1
+                """.format(table_name, filter_name, ra, dec))
+    else:
+        df = query_tap_json('http://lsst-qserv-dax01:5000/db/v0/tap',
+                """select * from {} where 
+                   scisql_s2PtInCPoly({}, {}, 
+                   corner1Ra, corner1Decl, corner2Ra, corner2Decl, 
+                   corner3Ra, corner3Decl, corner4Ra, corner4Decl)=1
+                """.format(table_name, ra, dec))
     return(df)
 
 
