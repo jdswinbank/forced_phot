@@ -1,16 +1,21 @@
 from __future__ import print_function, division, absolute_import
+
+""" These functions are designed to run on the PDAC server with access to
+the Stripe82 data
+"""
+
 import os
 import functools32
 import tempfile
+import numpy as np
 from lsst.daf.persistence import Butler
 import lsst.afw.table as afwTable
 from lsst.afw.geom import Angle, degrees
-import numpy as np
 from astropy.table import Table
 import astropy.units as u
 from forcedPhotExternalCatalog import ForcedPhotExternalCatalogTask
 
-
+# Define this output Butler (needed only for schema)
 if os.path.exists('/home/shupe/work/forcephot/output'):
     out_butler = Butler('/home/shupe/work/forcephot/output')
 elif os.path.exists('/hydra/workarea/forcephot/output'):
@@ -18,6 +23,21 @@ elif os.path.exists('/hydra/workarea/forcephot/output'):
 
 
 def make_refcat(ra, dec):
+    """
+    Make a reference catalog for forced photometry
+
+    Parameters:
+    -----------
+    ra : sequence or array
+        Right Ascension in decimal degrees
+    dec : sequence or array
+        Declination in decimal degrees
+
+    Returns:
+    --------
+    src_cat : lsst.afw.table.tableLib.SourceCatalog
+        Source catalog for the forced photometry task
+    """
     schema = out_butler.get('src_schema', immediate=True).schema
     mapper = afwTable.SchemaMapper(schema)
     mapper.addMinimalSchema(schema)
@@ -31,6 +51,19 @@ def make_refcat(ra, dec):
 
 
 def conv_afwtable_astropy(afwtable):
+    """
+    Convert an afwTable to an Astropy table
+
+    Parameters:
+    -----------
+    afwtable : lsst.afw.table table
+        input table
+
+    Returns:
+    --------
+    atab : astropy.table.Table
+        table in Astropy format
+    """
     with tempfile.NamedTemporaryFile() as tf:
         afwtable.writeFits(tf.name)
         tf.flush()
@@ -40,6 +73,22 @@ def conv_afwtable_astropy(afwtable):
 
 
 def parse_phot_table(afwTable, convert=True):
+    """
+    Parse a forced photometry output table, optionally converting to Astropy format
+
+    Parameters:
+    -----------
+    afwTable : lsst.afw.table table or astropy.table.Table
+        Output of forced photometry task
+    convert : bool
+        Convert input to Astropy table? Default is True
+        Only use this if input is already an Astropy table
+
+    Returns:
+    --------
+    tab : astropy.table.Table
+        converted table with metadata propagated to columns and magnitudes added
+    """
     if convert:
         tab = conv_afwtable_astropy(afwTable)
     else:
@@ -63,7 +112,24 @@ def parse_phot_table(afwTable, convert=True):
 
 
 def do_phot(dataId, refCat):
-    """ Perform forced photometry on dataId from repo_str at positions in refCat
+    """ Perform forced photometry on specified data and reference catalog
+
+    Call the ForcedPhotometryExternalCatalogTask to measure forced photometry
+    on the specified image, at the positions in the reference catalog. The
+    data are fetched from the repository cached by the get_in_butler function
+    (to speed up forced photometry on many images)
+
+    Parameters:
+    -----------
+    dataId : dict
+        Dictionary of key:value pairs specifying data
+    refCat : lsst.afw.table.tableLib.SourceCatalog 
+        Reference catalog containing positions for forced photometry
+
+    Returns:
+    --------
+    measCat : lsst.afw.table table
+        Forced photometry task output
     """
     in_butler = get_in_butler()
     exposure = in_butler.get('calexp', dataId=dataId)
