@@ -5,6 +5,19 @@ import pandas as pd
 
 
 def imgserv_json_to_df(json_input):
+    """
+    Convert JSON table from DAX query to Pandas dataframe
+
+    Parameters:
+    -----------
+    json_input : str
+        Path to JSON file from query
+
+    Returns:
+    --------
+    df : Pandas dataframe
+        Dataframe constructed from json table
+    """
     with open(json_input) as json_file:
         json_data = json.load(json_file)
 
@@ -17,11 +30,19 @@ def imgserv_json_to_df(json_input):
 def query_tap_json(tap_endpoint, adql_query):
     """
     Query a TAP service (designated by its tap_endpoint)
-    with a given ADQL query
+    with a given ADQL query, synchronously
 
-    Query is performed synchronously
+    Parameters:
+    -----------
+    tap_endpoint : str
+        URL for the tap service. '/sync' is added to the end
+    adql_query : str
+        Query in ADQL format
 
-    Return a Pandas dataframe
+    Returns:
+    --------
+    df : Pandas dataframe
+        Results of the query
     """
     r = requests.post(tap_endpoint + '/sync', data={'query': adql_query})
                                                    #'format': 'votable'})
@@ -38,6 +59,24 @@ def query_tap_json(tap_endpoint, adql_query):
 
 
 def get_image_table(ra, dec, filter_name, table_name='Science_Ccd_Exposure'):
+    """Get table of images from the DAX covering a specified position
+
+    Parameters:
+    -----------
+    ra : float
+        Right Ascension coordinate in decimal degrees
+    dec : float
+        Declination coordinate in decimal degrees
+    filter_name : str or None
+        Value to query by filterName in the table, or None to leave out
+    table_name : str
+        Table name to query. Defaults to 'Science_Ccd_Exposure'. Can be 'DeepCoadd'
+
+    Returns:
+    --------
+    df : Pandas dataframe
+        Results of the query as a dataframe 
+    """
     if filter_name is not None:
         df = query_tap_json('http://lsst-qserv-dax01:5000/db/v0/tap',
                 """select * from {} where 
